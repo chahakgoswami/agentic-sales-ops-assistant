@@ -3,6 +3,7 @@ import argparse
 import sys
 from sales_ops.data.store import LeadStore
 from sales_ops.agents.enrichment import LeadEnrichmentAgent
+from sales_ops.agents.drafting import OutreachDraftingAgent
 
 
 def cmd_list_leads(store: LeadStore, args: argparse.Namespace) -> None:
@@ -25,6 +26,20 @@ def cmd_enrich(store: LeadStore, args: argparse.Namespace) -> None:
             print(f"Error: lead '{args.lead_id}' not found.")
             sys.exit(1)
         agent.enrich_lead(lead)
+    else:
+        agent.run()
+
+
+def cmd_draft(store: LeadStore, args: argparse.Namespace) -> None:
+    agent = OutreachDraftingAgent(store)
+    if args.lead_id:
+        lead = store.get(args.lead_id)
+        if not lead:
+            print(f"Error: lead '{args.lead_id}' not found.")
+            sys.exit(1)
+        agent.draft_for_lead(lead)
+        print(f"\nSubject : {lead.outreach_subject}")
+        print(f"\nBody:\n{lead.outreach_body}")
     else:
         agent.run()
 
@@ -56,6 +71,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--lead-id", default=None, help="Enrich a specific lead by ID (default: all NEW leads)"
     )
     enrich_parser.set_defaults(func=cmd_enrich)
+
+    # draft sub-command
+    draft_parser = subparsers.add_parser("draft", help="Draft outreach emails for enriched leads")
+    draft_parser.add_argument(
+        "--lead-id", default=None,
+        help="Draft for a specific lead by ID (default: all ENRICHED leads)"
+    )
+    draft_parser.set_defaults(func=cmd_draft)
 
     # show sub-command
     show_parser = subparsers.add_parser("show", help="Show full details for a lead")
